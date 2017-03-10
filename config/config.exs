@@ -1,6 +1,21 @@
-# This file is responsible for configuring your application
-# and its dependencies with the aid of the Mix.Config module.
 use Mix.Config
+
+config :logger,
+  backends: [:console],
+  compile_time_purge_level: :info,
+  level: :info
+
+config :chronicler, ecto_repos: [Chronicler.EventRepo]
+
+config :chronicler, Chronicler.EventRepo,
+  adapter: Ecto.Adapters.Postgres,
+  database: "event_store",
+  username: "postgres",
+  password: "postgres",
+  hostname: "localhost",
+  port: "5432"
+
+import_config "#{Mix.env}.exs"
 
 # This configuration is loaded before any dependency and is restricted
 # to this project. If another project depends on this project, this

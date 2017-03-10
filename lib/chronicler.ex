@@ -4,15 +4,7 @@ defmodule Chronicler do
   """
 
   @doc """
-  Hello world.
-
-  ## Examples
-
-      iex> Chronicler.hello
-      :world
-
+  Command handler.
   """
-  def hello do
-    :world
-  end
+  def handle(command), do: Chronicler.Command.handle(command)
 end
