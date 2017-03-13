@@ -13,40 +13,47 @@ defmodule Chronicler.Command do
     GenServer.call(__MODULE__, {:handle, command})
   end
 
-  def store_event({type, aggregate_id, data}) do
+  def register_listener(module), do: register_listener(module, :on)
+  def register_listener(module, function) do
+    GenServer.call(__MODULE__, {:register_listener, module, function})
+  end
+
+  def store_event({event, version, aggregate_id, data}) do
     %Event{
-      event: Atom.to_string(type),
+      event: Atom.to_string(event),
+      version: version,
       aggregate_id: aggregate_id,
       data: data
     }
     |> Chronicler.EventRepo.insert
+    {event, aggregate_id, data}
   end
 
-  def handle_event({event, aggregate_id, data}) do
-    Registry.dispatch(Listener.Registry, event, fn entries ->
-      for {pid, module} <- entries do
-        if Process.alive?(pid), do: GenServer.call(pid, {:event,
-                                                         module,
-                                                         event,
-                                                         aggregate_id,
-                                                         data})
-      end
+  def handle_event({event, aggregate_id, data}, listeners) do
+    listeners
+    |> Enum.map(fn
+      {module, function} -> Task.start(module, function, [event, aggregate_id, data])
     end)
     {event, aggregate_id, data}
   end
 
-  def handle_call({:handle, command = %module{}}, _from, []) do
+  def handle_call({:handle, command = %module{}}, _from, listeners) do
     Logger.debug("Handling #{inspect command}.")
     with {:ok, events} <- apply(module, :handle, [command])
     do
       events
-      |> map(&handle_event/1)
       |> map(&store_event/1)
-      {:reply, {:ok}, []}
+      |> map(&(handle_event(&1, listeners)))
+      {:reply, {:ok}, listeners}
     else
-      {:error, error} -> {:reply, {:error, error}, []}
-      error           -> {:reply, {:error, error}, []}
+      {:error, error} -> {:reply, {:error, error}, listeners}
+      error           -> {:reply, {:error, error}, listeners}
     end
+  end
+
+  def handle_call({:register_listener, module, function}, _from, listeners) do
+    new_listeners = listeners ++ [{module, function}]
+    {:reply, {:ok, new_listeners}, new_listeners}
   end
 
 end

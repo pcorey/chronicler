@@ -9,7 +9,7 @@ config :chronicler, ecto_repos: [Chronicler.EventRepo]
 
 config :chronicler, Chronicler.EventRepo,
   adapter: Ecto.Adapters.Postgres,
-  database: "event_store",
+  database: "events",
   username: "postgres",
   password: "postgres",
   hostname: "localhost",
