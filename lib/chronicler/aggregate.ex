@@ -41,7 +41,8 @@ defmodule Chronicler.Aggregate do
   defp apply_new_events(module, version, state, events) do
     new_state = events
     |> Enum.map(fn
-      %{event: event, aggregate_id: aggregate_id, data: data} -> {String.to_atom(event), aggregate_id, data}
+      %{event: event, version: version, aggregate_id: aggregate_id, data: data} ->
+        {String.to_atom(event), version, aggregate_id, data}
     end)
     |> Enum.reduce(state, fn
       (event, state) -> apply(module, :apply_event, [event, state])
