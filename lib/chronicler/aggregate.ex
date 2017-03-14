@@ -19,7 +19,6 @@ defmodule Chronicler.Aggregate do
   end
 
   def start_link(aggregate_id, module) do
-    IO.puts("starting #{aggregate_id}")
     GenServer.start_link(__MODULE__, {nil, 0, struct(module)}, name: {
       :via, Registry, {Aggregate.Registry, aggregate_id}
     })
@@ -27,8 +26,14 @@ defmodule Chronicler.Aggregate do
 
   def get_pid(aggregate_id, module) do
     case Registry.lookup(Aggregate.Registry, aggregate_id) do
-      [{pid, _}] -> {:ok, pid}
-      [] -> Supervisor.start_child(Aggregate.Supervisor, [aggregate_id, module])
+      [{pid, _}] ->
+        {:ok, pid}
+      [] ->
+        case Supervisor.start_child(Aggregate.Supervisor, [aggregate_id, module]) do
+          {:ok, pid} -> {:ok, pid}
+          {:error, {:already_started, pid}} -> {:ok, pid}
+          error -> error
+        end
     end
   end
 

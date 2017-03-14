@@ -32,9 +32,8 @@ defmodule Chronicler.Command do
   def handle_event({event, aggregate_id, data}, listeners) do
     listeners
     |> Enum.map(fn
-      {module, function} -> Task.start(module, function, [event, aggregate_id, data])
+      {module, function} -> Task.async(module, function, [event, aggregate_id, data])
     end)
-    {event, aggregate_id, data}
   end
 
   def handle_call({:handle, command = %module{}}, _from, listeners) do
@@ -44,6 +43,8 @@ defmodule Chronicler.Command do
       events
       |> map(&store_event/1)
       |> map(&(handle_event(&1, listeners)))
+      |> List.flatten
+      |> Task.yield_many
       {:reply, {:ok}, listeners}
     else
       {:error, error} -> {:reply, {:error, error}, listeners}
